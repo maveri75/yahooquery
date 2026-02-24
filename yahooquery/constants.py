@@ -839,12 +839,12 @@ CONFIG = {
     },
     "esg_chart": {
         "path": "https://query2.finance.yahoo.com/v1/finance/esgChart",
-        "responseField": "esgChart",
+        "response_field": "esgChart",
         "query": {"symbol": {"required": True, "default": None}},
     },
     "esg_peer_scores": {
         "path": "https://query2.finance.yahoo.com/v1/finance/esgPeerScores",
-        "responseField": "esgPeerScores",
+        "response_field": "esgPeerScores",
         "query": {"symbol": {"required": True, "default": None}},
     },
     "recommendations": {

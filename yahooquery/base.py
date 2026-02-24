@@ -183,7 +183,7 @@ class _YahooFinance:
         config = CONFIG[key]
         params = self._construct_params(config, params)
         urls = self._construct_urls(config, params, **kwargs)
-        response_field = config["response_field"]
+        response_field = self._get_response_field(config, key)
         try:
             if isinstance(self.session, FuturesSession):
                 data = self._async_requests(response_field, urls, params, **kwargs)
@@ -265,24 +265,32 @@ class _YahooFinance:
         return urls
 
     def _async_requests(self, response_field, urls, params, **kwargs):
-        data = {}
-        for future in tqdm(
-            as_completed(urls),
-            total=len(urls),
-            disable=kwargs.get("disable", not self.progress),
-        ):
-            response = future.result()
-            json = self._validate_response(response.json(), response_field)
-            symbol = self._get_symbol(response, params)
-            if symbol is not None:
-                data[symbol] = self._construct_data(json, response_field, **kwargs)
-            else:
-                data = self._construct_data(json, response_field, **kwargs)
-        return data
+        responses = (
+            future.result()
+            for future in tqdm(
+                as_completed(urls),
+                total=len(urls),
+                disable=kwargs.get("disable", not self.progress),
+            )
+        )
+        return self._process_responses(responses, response_field, params, **kwargs)
 
     def _sync_requests(self, response_field, urls, params, **kwargs):
+        return self._process_responses(urls, response_field, params, **kwargs)
+
+    @staticmethod
+    def _get_response_field(config, key):
+        # Backward compatible with older keys used in endpoint maps.
+        response_field = config.get("response_field", config.get("responseField"))
+        if not response_field:
+            raise KeyError(
+                f"Invalid config for '{key}'. Missing required response field key."
+            )
+        return response_field
+
+    def _process_responses(self, responses, response_field, params, **kwargs):
         data = {}
-        for response in urls:
+        for response in responses:
             json = self._validate_response(response.json(), response_field)
             symbol = self._get_symbol(response, params)
             if symbol is not None:
