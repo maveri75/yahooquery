@@ -3,6 +3,18 @@
 ## Goal
 Migliorare stabilita', performance e manutenibilita' senza rompere l'API pubblica.
 
+## Next implementation (1m snapshots target)
+- [ ] Definire configurazione simboli spot: `^SPX`, `^VIX`, `^VVIX` + 4 ETF VIX (default: `VXX`, `UVXY`, `VIXY`, `VXZ`).
+- [ ] Implementare `scripts/collect_1m_snapshots.py` con loop a 60s e `Ticker` riusati per tutta la sessione.
+- [ ] Precalcolare (refresh giornaliero) le scadenze mensili entro 12 mesi per `^SPX` e `^VIX`.
+- [ ] Per opzioni usare richieste per singola scadenza (`date=`) invece di full chain ad ogni ciclo.
+- [ ] Salvare output in formato partizionato per data/simbolo/scadenza (`data/raw_snapshots/YYYY-MM-DD/...`).
+- [ ] Gestire `^VVIX` come solo spot snapshot (fallback esplicito quando option chain non disponibile).
+- [ ] Aggiungere metriche runtime per ciclo: latenza totale, numero chiamate, errori/retry.
+- [ ] Aggiungere retry/backoff + timeout separati (connect/read) configurabili da env/config.
+- [ ] Test unit: filtro scadenze mensili, scheduler 60s, normalizzazione schema snapshot.
+- [ ] Test integration (opt-in): smoke test reale su 1 ciclo completo con guardrail di durata.
+
 ## Priority 1 (Next sessions)
 - [ ] Introdurre un helper ufficiale per riuso `Ticker/sessione` (evitare reinstanziazione in loop).
 - [ ] Aggiungere benchmark script versionato (`scripts/benchmark_core.py`) con output CSV.
