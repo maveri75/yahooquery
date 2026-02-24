@@ -8,12 +8,30 @@ from yahooquery.constants import CONFIG
 
 
 class FakeResponse:
-    def __init__(self, url, payload):
+    def __init__(
+        self,
+        url,
+        payload,
+        status_code=200,
+        reason="OK",
+        raise_http=False,
+        json_error=None,
+    ):
         self.url = url
         self._payload = payload
+        self.status_code = status_code
+        self.reason = reason
+        self._raise_http = raise_http
+        self._json_error = json_error
 
     def json(self):
+        if self._json_error:
+            raise self._json_error
         return self._payload
+
+    def raise_for_status(self):
+        if self._raise_http:
+            raise RuntimeError(f"{self.status_code} {self.reason}")
 
 
 class FakeFuture:
@@ -154,3 +172,50 @@ def test_config_entries_have_expected_shape():
         assert "path" in config, key
         assert "query" in config and isinstance(config["query"], dict), key
         assert "response_field" in config or "responseField" in config, key
+
+
+def test_extract_response_json_handles_http_status_error():
+    client = make_instance(FakeSyncSession(), symbols=["aapl"])
+    response = FakeResponse(
+        "https://example.test/data",
+        {},
+        status_code=503,
+        reason="Service Unavailable",
+        raise_http=True,
+    )
+    data = client._extract_response_json(response, "quoteSummary")
+    assert data == "HTTP 503 Service Unavailable"
+
+
+def test_extract_response_json_handles_invalid_json():
+    client = make_instance(FakeSyncSession(), symbols=["aapl"])
+    response = FakeResponse(
+        "https://example.test/data",
+        {},
+        status_code=502,
+        reason="Bad Gateway",
+        json_error=ValueError("bad json"),
+    )
+    data = client._extract_response_json(response, "quoteSummary")
+    assert data == "HTTP 502 Invalid JSON response"
+
+
+def test_get_data_returns_error_dict_when_request_method_fails(monkeypatch):
+    key = "unit_async_failure"
+    monkeypatch.setitem(
+        base_module.CONFIG,
+        key,
+        {
+            "path": "https://example.test/data",
+            "response_field": "quoteSummary",
+            "query": {"symbol": {"required": True, "default": None}},
+        },
+    )
+    monkeypatch.setattr(base_module, "FuturesSession", FakeAsyncSession)
+    client = make_instance(FakeAsyncSession())
+    monkeypatch.setattr(
+        client,
+        "_async_requests",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+    assert client._get_data(key) == {"error": "boom"}

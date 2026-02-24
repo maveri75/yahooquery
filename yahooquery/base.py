@@ -184,14 +184,13 @@ class _YahooFinance:
         params = self._construct_params(config, params)
         urls = self._construct_urls(config, params, **kwargs)
         response_field = self._get_response_field(config, key)
+        request_method = (
+            self._async_requests if isinstance(self.session, FuturesSession) else self._sync_requests
+        )
         try:
-            if isinstance(self.session, FuturesSession):
-                data = self._async_requests(response_field, urls, params, **kwargs)
-            else:
-                data = self._sync_requests(response_field, urls, params, **kwargs)
-            return data
-        except ValueError:
-            return {"error": "HTTP 404 Not Found.  Please try again"}
+            return request_method(response_field, urls, params, **kwargs)
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            return self._format_request_exception(exc)
 
     def _construct_params(self, config, params=None):
         params = params or {}
@@ -291,13 +290,49 @@ class _YahooFinance:
     def _process_responses(self, responses, response_field, params, **kwargs):
         data = {}
         for response in responses:
-            json = self._validate_response(response.json(), response_field)
+            json = self._extract_response_json(response, response_field)
             symbol = self._get_symbol(response, params)
             if symbol is not None:
                 data[symbol] = self._construct_data(json, response_field, **kwargs)
             else:
                 data = self._construct_data(json, response_field, **kwargs)
         return data
+
+    def _extract_response_json(self, response, response_field):
+        http_error = self._get_http_error(response)
+        if http_error:
+            return http_error
+        try:
+            return self._validate_response(response.json(), response_field)
+        except ValueError:
+            status_code = getattr(response, "status_code", None)
+            if status_code:
+                return f"HTTP {status_code} Invalid JSON response"
+            return "Invalid JSON response"
+
+    @staticmethod
+    def _get_http_error(response):
+        raise_for_status = getattr(response, "raise_for_status", None)
+        if not callable(raise_for_status):
+            return None
+        try:
+            raise_for_status()
+        except Exception as exc:
+            status_code = getattr(response, "status_code", None)
+            reason = getattr(response, "reason", "") or ""
+            if status_code:
+                reason_text = f" {reason}".rstrip() if reason else ""
+                return f"HTTP {status_code}{reason_text}".rstrip()
+            message = str(exc).strip()
+            return message if message else "HTTP request failed"
+        return None
+
+    @staticmethod
+    def _format_request_exception(exc):
+        message = str(exc).strip()
+        if message:
+            return {"error": message}
+        return {"error": f"{exc.__class__.__name__}"}
 
     def _validate_response(self, response, response_field):
         try:

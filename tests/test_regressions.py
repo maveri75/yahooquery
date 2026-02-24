@@ -1,3 +1,5 @@
+import warnings
+
 import yahooquery.base as base_module
 import yahooquery.misc as misc
 from yahooquery import Ticker
@@ -77,3 +79,19 @@ def test_ticker_passes_setup_url_to_session_initializer(monkeypatch):
 
     Ticker("aapl", session=session, setup_url="https://finance.yahoo.com/quote/AAPL")
     assert captured["kwargs"]["url"] == "https://finance.yahoo.com/quote/AAPL"
+
+
+def test_to_dataframe_does_not_emit_concat_keys_warning():
+    ticker = Ticker("aapl msft", session=DummySession("crumb-123"))
+    # Simulate one symbol without usable data to cover key/dataframe mismatch.
+    data = {"aapl": {"items": [{"foo": 1}]}, "msft": "No data found"}
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always")
+        df = ticker._to_dataframe(data, data_filter="items")
+    assert not [
+        warning
+        for warning in recorded
+        if isinstance(warning.message, FutureWarning)
+        and "len(keys) != len(objs)" in str(warning.message)
+    ]
+    assert set(df.index.get_level_values("symbol")) == {"aapl"}
