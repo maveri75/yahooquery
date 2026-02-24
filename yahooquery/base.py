@@ -185,7 +185,9 @@ class _YahooFinance:
         urls = self._construct_urls(config, params, **kwargs)
         response_field = self._get_response_field(config, key)
         request_method = (
-            self._async_requests if isinstance(self.session, FuturesSession) else self._sync_requests
+            self._async_requests
+            if isinstance(self.session, FuturesSession)
+            else self._sync_requests
         )
         try:
             return request_method(response_field, urls, params, **kwargs)
