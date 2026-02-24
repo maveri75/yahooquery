@@ -22,4 +22,13 @@ def test_bad_country():
 
 
 def test_default_query_param(ticker):
-    assert ticker.default_query_params == COUNTRIES[ticker.country]
+    expected = COUNTRIES[ticker.country]
+    params = ticker.default_query_params
+
+    for key, value in expected.items():
+        assert params[key] == value
+
+    if ticker.crumb is not None:
+        assert params["crumb"] == ticker.crumb
+    else:
+        assert "crumb" not in params

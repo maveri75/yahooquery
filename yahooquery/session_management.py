@@ -93,6 +93,7 @@ def setup_session(session: requests.Session, url: str = None):
 
 
 def initialize_session(session=None, **kwargs):
+    setup_url = kwargs.pop("url", kwargs.pop("setup_url", None))
     if session is None:
         max_workers = kwargs.pop("max_workers", 8)
         is_async = kwargs.pop("asynchronous", False)
@@ -101,5 +102,5 @@ def initialize_session(session=None, **kwargs):
         session = requests.Session(**kwargs, headers=headers, impersonate=impersonate)
         if is_async:
             session = FuturesSession(max_workers=max_workers, session=session)
-        session = setup_session(session)
+        session = setup_session(session, url=setup_url)
     return session

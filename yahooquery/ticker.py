@@ -1340,12 +1340,14 @@ class Ticker(_YahooFinance):
         dataframes = []
         for symbol in self._symbols:
             try:
-                if data[symbol]["options"]:
-                    dataframes.append(
-                        self._option_dataframe(data[symbol]["options"], symbol)
-                    )
-            except TypeError:
-                pass
+                options = data[symbol]["options"]
+            except (TypeError, KeyError):
+                continue
+            if not options:
+                continue
+            df = self._option_dataframe(options, symbol)
+            if not df.empty:
+                dataframes.append(df)
         if dataframes:
             df = pd.concat(dataframes, sort=False)
             df.set_index(["symbol", "expiration", "optionType"], inplace=True)
@@ -1358,19 +1360,29 @@ class Ticker(_YahooFinance):
     def _option_dataframe(self, data, symbol):
         dataframes = []
         for option_type in ["calls", "puts"]:
-            df = pd.concat(
-                [pd.DataFrame(data[i][option_type]) for i in range(len(data))],
-                sort=False,
-            )
-            df["optionType"] = option_type
-            dataframes.append(df)
+            option_frames = []
+            for option_data in data:
+                if not isinstance(option_data, dict):
+                    continue
+                contracts = option_data.get(option_type)
+                if contracts:
+                    option_frames.append(pd.DataFrame(contracts))
+            if option_frames:
+                df = pd.concat(option_frames, sort=False)
+                df["optionType"] = option_type
+                dataframes.append(df)
+        if not dataframes:
+            return pd.DataFrame()
         df = pd.concat(dataframes, sort=False)
         df["symbol"] = symbol
         try:
-            df["expiration"] = pd.to_datetime(df["expiration"], unit="s")
-            df["lastTradeDate"] = pd.to_datetime(df["lastTradeDate"], unit="s")
+            if "expiration" in df.columns:
+                df["expiration"] = pd.to_datetime(df["expiration"], unit="s")
+            if "lastTradeDate" in df.columns:
+                df["lastTradeDate"] = pd.to_datetime(df["lastTradeDate"], unit="s")
         except ValueError:
-            df["expiration"] = [d.get("fmt") for d in df["expiration"]]
+            if "expiration" in df.columns:
+                df["expiration"] = [d.get("fmt") for d in df["expiration"]]
         except KeyError:
             pass
         return df

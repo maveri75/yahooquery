@@ -10,8 +10,9 @@ BASE_URL = "https://query2.finance.yahoo.com"
 
 
 def _make_request(
-    url, response_field=None, country=None, method="get", params={}, data=None, **kwargs
+    url, response_field=None, country=None, method="get", params=None, data=None, **kwargs
 ):
+    params = params.copy() if params else {}
     if country:
         country = country.lower()
         try:

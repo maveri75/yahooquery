@@ -32,7 +32,11 @@ class _YahooFinance:
         self.username = kwargs.pop("username", os.getenv("YF_USERNAME", None))
         self.password = kwargs.pop("password", os.getenv("YF_PASSWORD", None))
         self._setup_url = kwargs.pop("setup_url", os.getenv("YF_SETUP_URL", None))
-        self.session = initialize_session(kwargs.pop("session", None), **kwargs)
+        self.session = initialize_session(
+            kwargs.pop("session", None),
+            url=self._setup_url,
+            **kwargs,
+        )
         if self.username and self.password:
             self.login()
         self.crumb = get_crumb(self.session)
@@ -78,7 +82,7 @@ class _YahooFinance:
         To change the default query parameters, set the country property equal
         to a valid country.
         """
-        params = self._country_params
+        params = self._country_params.copy()
         if self.crumb is not None:
             params["crumb"] = self.crumb
         return params
