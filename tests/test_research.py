@@ -4,14 +4,16 @@ import pytest
 
 from yahooquery import Research
 
-RESEARCH = [
-    Research(username=os.getenv("YF_USERNAME"), password=os.getenv("YF_PASSWORD"))
+pytestmark = [pytest.mark.integration, pytest.mark.premium]
+
+RESEARCH_CONFIGS = [
+    {"username": os.getenv("YF_USERNAME"), "password": os.getenv("YF_PASSWORD")}
 ]
 
 
-@pytest.fixture(params=RESEARCH)
+@pytest.fixture(params=RESEARCH_CONFIGS)
 def research(request):
-    return request.param
+    return Research(**request.param)
 
 
 def test_reports(research):

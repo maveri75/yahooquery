@@ -3,12 +3,12 @@ import pytest
 from yahooquery import Ticker
 from yahooquery.constants import COUNTRIES
 
-TICKERS = [Ticker("aapl", country="brazil")]
+pytestmark = pytest.mark.integration
 
 
-@pytest.fixture(params=TICKERS)
-def ticker(request):
-    return request.param
+@pytest.fixture
+def ticker():
+    return Ticker("aapl", country="brazil")
 
 
 def test_country_change(ticker):

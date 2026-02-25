@@ -35,7 +35,9 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 markers = [
-    "integration: network-dependent smoke tests (opt-in with YQ_RUN_INTEGRATION=1)",
+    "unit: fast offline tests with mocked responses",
+    "integration: network-dependent tests (opt-in with YQ_RUN_INTEGRATION=1)",
+    "premium: tests requiring Yahoo premium credentials (opt-in with YQ_RUN_PREMIUM=1)",
 ]
 
 [tool.ruff]

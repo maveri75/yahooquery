@@ -2,6 +2,8 @@ import pytest
 
 from yahooquery import Screener
 
+pytestmark = pytest.mark.integration
+
 
 def test_screener():
     s = Screener()

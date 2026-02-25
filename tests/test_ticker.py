@@ -9,14 +9,17 @@ from pandas.testing import assert_frame_equal, assert_index_equal, assert_series
 from yahooquery import Ticker
 from yahooquery.utils import history_dataframe
 
-TICKERS = [
-    Ticker(
-        "aapl", username=os.getenv("YFF_USERNAME"), password=os.getenv("YFF_PASSWORD")
+pytestmark = pytest.mark.integration
+
+TICKER_CONFIGS = [
+    (
+        "aapl",
+        {"username": os.getenv("YFF_USERNAME"), "password": os.getenv("YFF_PASSWORD")},
     ),
-    Ticker("aapl ^GSPC btcusd=x brk-b logo.is l&tfh.ns", asynchronous=True),
-    Ticker("aaapl"),
-    Ticker("hasgx"),
-    Ticker("btcusd=x", formatted=True, validate=True),
+    ("aapl ^GSPC btcusd=x brk-b logo.is l&tfh.ns", {"asynchronous": True}),
+    ("aaapl", {}),
+    ("hasgx", {}),
+    ("btcusd=x", {"formatted": True, "validate": True}),
 ]
 
 FINANCIALS = [
@@ -56,13 +59,15 @@ def premium_props(cls):
 
 
 @pytest.mark.parametrize("prop", premium_props(Ticker))
+@pytest.mark.premium
 def test_premium(ticker, prop):
     assert getattr(ticker, prop) is not None
 
 
-@pytest.fixture(params=TICKERS)
+@pytest.fixture(params=TICKER_CONFIGS)
 def ticker(request):
-    return request.param
+    symbols, kwargs = request.param
+    return Ticker(symbols, **kwargs)
 
 
 def test_symbols_change(ticker):
@@ -70,10 +75,12 @@ def test_symbols_change(ticker):
     assert ticker.symbols == ["aapl", "msft", "fb"]
 
 
+@pytest.mark.premium
 def test_p_reports(ticker):
     assert ticker.p_reports("26426_Technical Analysis_1584057600000")
 
 
+@pytest.mark.premium
 def test_p_ideas(ticker):
     assert ticker.p_ideas("tc_USvyGmAAlpfwAygABAACAAAD6CYg")
 
@@ -137,6 +144,7 @@ def test_get_financial_data(ticker):
         assert isinstance(result, pd.DataFrame)
 
 
+@pytest.mark.premium
 def test_p_get_financial_data(ticker):
     assert (
         ticker.p_get_financial_data("GrossProfit NetIncome TotalAssets ForwardPeRatio")

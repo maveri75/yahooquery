@@ -1,4 +1,5 @@
 import time
+from typing import Any
 
 BROWSERS = {
     "chrome99": {
@@ -1063,6 +1064,67 @@ VIZ_CONFIG = {
         ],
     },
 }
+
+
+def validate_config_schema(config_map: dict[str, Any]) -> None:
+    """Validate endpoint map structure for Yahoo endpoint definitions."""
+    errors = []
+    for endpoint_name, endpoint_cfg in config_map.items():
+        if not isinstance(endpoint_cfg, dict):
+            errors.append(f"{endpoint_name}: config must be a dict")
+            continue
+        path = endpoint_cfg.get("path")
+        query = endpoint_cfg.get("query")
+        has_response_field = "response_field" in endpoint_cfg
+        has_legacy_response_field = "responseField" in endpoint_cfg
+
+        if not isinstance(path, str) or not path:
+            errors.append(f"{endpoint_name}: path must be a non-empty string")
+        if not isinstance(query, dict):
+            errors.append(f"{endpoint_name}: query must be a dict")
+            continue
+        if has_response_field == has_legacy_response_field:
+            errors.append(
+                f"{endpoint_name}: define exactly one of response_field/responseField"
+            )
+
+        for param_name, param_cfg in query.items():
+            if not isinstance(param_cfg, dict):
+                errors.append(
+                    f"{endpoint_name}: query param '{param_name}' must be a dict"
+                )
+                continue
+            if "required" not in param_cfg or not isinstance(param_cfg["required"], bool):
+                errors.append(
+                    f"{endpoint_name}: query param '{param_name}' must define boolean required"
+                )
+            if "default" not in param_cfg:
+                errors.append(
+                    f"{endpoint_name}: query param '{param_name}' must define default"
+                )
+
+        if isinstance(path, str):
+            has_symbol_placeholder = "{symbol}" in path
+            has_symbol_param = "symbol" in query
+            has_symbols_param = "symbols" in query
+            if has_symbol_placeholder and has_symbol_param:
+                errors.append(
+                    f"{endpoint_name}: path placeholder '{{symbol}}' conflicts with query symbol"
+                )
+            if has_symbol_placeholder and has_symbols_param:
+                errors.append(
+                    f"{endpoint_name}: path placeholder '{{symbol}}' conflicts with query symbols"
+                )
+            if has_symbol_param and has_symbols_param:
+                errors.append(
+                    f"{endpoint_name}: query cannot define both symbol and symbols"
+                )
+
+    if errors:
+        raise ValueError("Invalid CONFIG schema:\n- " + "\n- ".join(errors))
+
+
+validate_config_schema(CONFIG)
 
 FUND_DETAILS = [
     "holdings",

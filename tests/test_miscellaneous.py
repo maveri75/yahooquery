@@ -8,6 +8,8 @@ from yahooquery import (
     search,
 )
 
+pytestmark = pytest.mark.integration
+
 
 def test_get_currencies():
     assert get_currencies() is not None

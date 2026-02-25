@@ -11,6 +11,10 @@ from yahooquery.snapshot_collector import (
     should_capture_skew,
 )
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 def utc_timestamp(year, month, day):
     return int(datetime(year, month, day, tzinfo=timezone.utc).timestamp())

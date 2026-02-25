@@ -24,10 +24,10 @@ Migliorare stabilita', performance e manutenibilita' senza rompere l'API pubblic
 - [ ] Aggiungere timeout separati (connect/read) e test dedicati.
 
 ## Priority 2
-- [ ] Separare test offline/unit da test rete/integration con marker pytest (`unit`, `integration`, `premium`).
-- [ ] Ridurre flaky test rete con fixture mock centrali per response HTTP/JSON.
-- [ ] Aggiungere CI matrix minima: Python 3.9-3.12 + pandas 2.2/3.x.
-- [ ] Validazione schema `CONFIG` piu' stretta (chiavi richieste, tipi, coerenza query/response).
+- [x] Separare test offline/unit da test rete/integration con marker pytest (`unit`, `integration`, `premium`).
+- [x] Ridurre flaky test rete con fixture mock centrali per response HTTP/JSON.
+- [x] Aggiungere CI matrix minima: Python 3.9-3.12 + pandas 2.2/3.x.
+- [x] Validazione schema `CONFIG` piu' stretta (chiavi richieste, tipi, coerenza query/response).
 
 ## Priority 3
 - [ ] Migliorare docs con best practice performance:

@@ -1,7 +1,10 @@
+import pytest
 from curl_cffi import requests
 from curl_cffi.requests.exceptions import ImpersonateError
 
 from yahooquery.constants import BROWSERS
+
+pytestmark = pytest.mark.integration
 
 
 def test_browser_headers():
