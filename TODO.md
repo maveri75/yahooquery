@@ -4,7 +4,8 @@
 Migliorare stabilita', performance e manutenibilita' senza rompere l'API pubblica.
 
 ## Next implementation (1m snapshots target)
-- [ ] Definire configurazione simboli spot: `^SPX`, `^VIX`, `^VVIX` + 4 ETF VIX (default: `VXX`, `UVXY`, `VIXY`, `VXZ`).
+- [ ] Definire configurazione simboli spot 1m: `^SPX`, `^VIX`, `^VVIX` + ETF (`SVOL`, `VXX`, `UVIX`, `UVXY`, `SPY`).
+- [ ] Aggiungere `^SKEW` con schedulazione separata 1 volta al giorno a mercato chiuso.
 - [ ] Implementare `scripts/collect_1m_snapshots.py` con loop a 60s e `Ticker` riusati per tutta la sessione.
 - [ ] Precalcolare (refresh giornaliero) le scadenze mensili entro 12 mesi per `^SPX` e `^VIX`.
 - [ ] Per opzioni usare richieste per singola scadenza (`date=`) invece di full chain ad ogni ciclo.
