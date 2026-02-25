@@ -40,3 +40,71 @@ data = tickers.p_company_360
 # Do something with data
 # ...
 ```
+
+## Performance Best Practices
+
+For high-frequency workflows (for example, 1-minute snapshots), use these defaults:
+
+1. Reuse `Ticker` instances for the full process lifetime.
+2. Use `asynchronous=True` when fetching many symbols at once.
+3. Tune `max_workers` based on concurrency needs and provider limits.
+
+```python
+from yahooquery import Ticker
+
+symbols = "^SPX ^VIX ^VVIX SPY UVXY VXX"
+t = Ticker(symbols, asynchronous=True, max_workers=8, timeout=5)
+
+# Reuse t across cycles instead of creating a new Ticker each minute.
+snapshot = t.quotes
+```
+
+## Fast Snapshots vs Heavy Endpoints
+
+Use lightweight endpoints for frequent polling and move heavier endpoints to lower-frequency jobs.
+
+### Frequent (snapshot friendly)
+
+```python
+from yahooquery import Ticker
+
+t = Ticker("^SPX ^VIX ^VVIX", asynchronous=True, max_workers=8)
+quotes = t.quotes
+```
+
+### Heavy (schedule less often)
+
+```python
+from yahooquery import Ticker
+
+t = Ticker("^SPX")
+all_options = t.option_chain      # full chain for all expirations
+all_modules = t.all_modules       # large quote summary payload
+history = t.history(period="max") # broad historical pull
+```
+
+When you need options snapshots at high cadence, prefer one expiration at a time:
+
+```python
+from yahooquery import Ticker
+
+t = Ticker("^SPX")
+one_expiration = t._get_data("options", {"date": 1778976000})
+```
+
+## Optional In-Memory Cache Evaluation
+
+For real-time quotes/options snapshots, response caching is usually not recommended because stale data risk is high.
+
+Cache can still be useful for near-static metadata:
+
+- expiration calendars
+- symbol validation results
+- infrequent module payloads
+
+Recommended policy:
+
+- keep cache disabled by default
+- enable only for metadata endpoints
+- use short TTL windows (for example, 5-30 seconds)
+- never cache critical tick-by-tick snapshot payloads

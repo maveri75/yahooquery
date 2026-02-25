@@ -98,6 +98,26 @@ faang = Ticker(symbols)
 faang.summary_detail
 ```
 
+## Performance Tips
+
+For short-interval snapshot workloads, these patterns make a large difference:
+
+1. Reuse `Ticker` instances instead of re-instantiating inside loops.
+2. Use `asynchronous=True` for multi-symbol reads.
+3. Tune `max_workers` to your workload size and network limits.
+
+```python
+from yahooquery import Ticker
+
+symbols = "^SPX ^VIX ^VVIX SPY UVXY VXX"
+ticker = Ticker(symbols, asynchronous=True, max_workers=8, timeout=5)
+
+# Fast snapshot endpoints
+quotes = ticker.quotes
+```
+
+Also prefer lighter endpoints (`quotes`, `price`) for frequent polling and reserve heavier endpoints (`option_chain`, large `history` ranges, `all_modules`) for lower-frequency jobs.
+
 ## License
 
 This project is licensed under the terms of the MIT license.

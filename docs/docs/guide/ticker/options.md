@@ -1,5 +1,16 @@
 # Options
 
+!!! warning
+    `option_chain` retrieves all expirations and can be expensive for high-frequency loops.
+    For frequent snapshots, prefer one expiration at a time via:
+
+    ```python
+    from yahooquery import Ticker
+
+    t = Ticker("^SPX")
+    data = t._get_data("options", {"date": 1778976000})
+    ```
+
 ### **option_chain**
 
 === "Details"

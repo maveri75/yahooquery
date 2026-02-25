@@ -30,12 +30,9 @@ Migliorare stabilita', performance e manutenibilita' senza rompere l'API pubblic
 - [x] Validazione schema `CONFIG` piu' stretta (chiavi richieste, tipi, coerenza query/response).
 
 ## Priority 3
-- [ ] Migliorare docs con best practice performance:
-- riuso istanza `Ticker`
-- uso `asynchronous=True`
-- uso `max_workers` su workload multi-symbol
-- [ ] Aggiungere esempi "snapshot rapida" (`quotes`/`price`) vs endpoint pesanti.
-- [ ] Valutare cache opzionale in memoria per richieste ripetute a breve distanza.
+- [x] Migliorare docs con best practice performance (riuso istanza `Ticker`, uso `asynchronous=True`, tuning `max_workers`).
+- [x] Aggiungere esempi "snapshot rapida" (`quotes`/`price`) vs endpoint pesanti.
+- [x] Valutare cache opzionale in memoria per richieste ripetute a breve distanza.
 
 ## Regression checks (mandatory before push)
 - [ ] `python -m pytest tests/test_base_core.py tests/test_regressions.py -q`
