@@ -3,6 +3,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 import time
 from calendar import monthrange
 from dataclasses import dataclass, field
@@ -32,6 +33,39 @@ def parse_symbol_list(raw_value: str) -> list[str]:
         if value:
             values.append(value)
     return values
+
+
+def env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%s. Using default %s.", name, raw, default)
+        return default
+
+
+def env_float(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%s. Using default %s.", name, raw, default)
+        return default
+
+
+def env_optional_float(name: str) -> Optional[float]:
+    raw = os.getenv(name)
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning("Invalid %s=%s. Ignoring override.", name, raw)
+        return None
 
 
 def add_months(base_date: date, months: int) -> date:
@@ -114,6 +148,8 @@ class CollectorConfig:
     retries: int = 2
     backoff_seconds: float = 0.5
     timeout: float = 5.0
+    timeout_connect: Optional[float] = None
+    timeout_read: Optional[float] = None
     max_workers: int = 8
     market_timezone: str = "America/New_York"
     skew_capture_hour: int = 16
@@ -123,6 +159,15 @@ class CollectorConfig:
         default_factory=lambda: DEFAULT_OPTIONS_SYMBOLS.copy()
     )
     skew_symbol: str = DEFAULT_SKEW_SYMBOL
+
+    def resolved_timeout(self):
+        if self.timeout_connect is None and self.timeout_read is None:
+            return self.timeout
+        connect_timeout = (
+            self.timeout if self.timeout_connect is None else self.timeout_connect
+        )
+        read_timeout = self.timeout if self.timeout_read is None else self.timeout_read
+        return (connect_timeout, read_timeout)
 
 
 class SnapshotCollector:
@@ -142,16 +187,17 @@ class SnapshotCollector:
         self._expiration_cache: dict[str, list[int]] = {}
         self._expiration_cache_updated_at: Optional[datetime] = None
         self._skew_last_capture_date: Optional[date] = None
+        self._request_timeout = self.config.resolved_timeout()
 
         self.spot_ticker = self._create_ticker(
             self.config.spot_symbols,
             asynchronous=True,
-            timeout=self.config.timeout,
+            timeout=self._request_timeout,
             max_workers=self.config.max_workers,
         )
         self._shared_session = getattr(self.spot_ticker, "session", None)
 
-        ticker_kwargs = {"timeout": self.config.timeout}
+        ticker_kwargs = {"timeout": self._request_timeout}
         if self._shared_session is not None:
             ticker_kwargs["session"] = self._shared_session
 
@@ -272,7 +318,7 @@ class SnapshotCollector:
     def _fetch_spot_fallback(self, symbol: str) -> tuple[object, Optional[str]]:
         ticker = self._spot_fallback_tickers.get(symbol)
         if ticker is None:
-            ticker_kwargs = {"timeout": self.config.timeout}
+            ticker_kwargs = {"timeout": self._request_timeout}
             if self._shared_session is not None:
                 ticker_kwargs["session"] = self._shared_session
             try:
@@ -639,9 +685,36 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cycles", type=int, default=None)
     parser.add_argument("--lookahead-months", type=int, default=12)
     parser.add_argument("--refresh-expirations-hours", type=int, default=24)
-    parser.add_argument("--retries", type=int, default=2)
-    parser.add_argument("--backoff-seconds", type=float, default=0.5)
-    parser.add_argument("--timeout", type=float, default=5.0)
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=env_int("YQ_RETRIES", 2),
+        help="Retries for transient failures (env: YQ_RETRIES).",
+    )
+    parser.add_argument(
+        "--backoff-seconds",
+        type=float,
+        default=env_float("YQ_BACKOFF_SECONDS", 0.5),
+        help="Backoff base seconds (env: YQ_BACKOFF_SECONDS).",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=env_float("YQ_TIMEOUT", 5.0),
+        help="Base timeout in seconds (env: YQ_TIMEOUT).",
+    )
+    parser.add_argument(
+        "--timeout-connect",
+        type=float,
+        default=env_optional_float("YQ_TIMEOUT_CONNECT"),
+        help="Connect timeout seconds override (env: YQ_TIMEOUT_CONNECT).",
+    )
+    parser.add_argument(
+        "--timeout-read",
+        type=float,
+        default=env_optional_float("YQ_TIMEOUT_READ"),
+        help="Read timeout seconds override (env: YQ_TIMEOUT_READ).",
+    )
     parser.add_argument("--max-workers", type=int, default=8)
     parser.add_argument("--market-timezone", default="America/New_York")
     parser.add_argument("--skew-capture-hour", type=int, default=16)
@@ -659,6 +732,8 @@ def build_config_from_args(args: argparse.Namespace) -> CollectorConfig:
         retries=args.retries,
         backoff_seconds=args.backoff_seconds,
         timeout=args.timeout,
+        timeout_connect=args.timeout_connect,
+        timeout_read=args.timeout_read,
         max_workers=args.max_workers,
         market_timezone=args.market_timezone,
         skew_capture_hour=args.skew_capture_hour,

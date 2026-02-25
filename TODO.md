@@ -12,9 +12,9 @@ Migliorare stabilita', performance e manutenibilita' senza rompere l'API pubblic
 - [x] Salvare output in formato partizionato per data/simbolo/scadenza (`data/raw_snapshots/YYYY-MM-DD/...`).
 - [x] Gestire `^VVIX` come solo spot snapshot (fallback esplicito quando option chain non disponibile).
 - [x] Aggiungere metriche runtime per ciclo: latenza totale, numero chiamate, errori/retry.
-- [ ] Aggiungere retry/backoff + timeout separati (connect/read) configurabili da env/config.
+- [x] Aggiungere retry/backoff + timeout separati (connect/read) configurabili da env/config.
 - [x] Test unit: filtro scadenze mensili, scheduler 60s, normalizzazione schema snapshot.
-- [ ] Test integration (opt-in): smoke test reale su 1 ciclo completo con guardrail di durata.
+- [x] Test integration (opt-in): smoke test reale su 1 ciclo completo con guardrail di durata.
 
 ## Priority 1 (Next sessions)
 - [ ] Introdurre un helper ufficiale per riuso `Ticker/sessione` (evitare reinstanziazione in loop).

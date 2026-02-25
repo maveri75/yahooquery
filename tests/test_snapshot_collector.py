@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from yahooquery.snapshot_collector import (
     CollectorConfig,
     SnapshotCollector,
+    build_argument_parser,
+    build_config_from_args,
     select_monthly_expirations,
     should_capture_skew,
 )
@@ -146,3 +148,34 @@ def test_run_cycle_writes_partitioned_snapshots(tmp_path):
     assert metrics["option_contracts"] == 4
     assert metrics["skew_snapshots_written"] == 1
     assert metrics["errors"] == []
+
+
+def test_collector_uses_separate_connect_and_read_timeouts():
+    factory = FakeTickerFactory()
+    config = CollectorConfig(
+        timeout=9.0,
+        timeout_connect=2.0,
+        timeout_read=7.0,
+    )
+    SnapshotCollector(config=config, ticker_factory=factory, sleep_fn=lambda _: None)
+    for instance in factory.instances:
+        assert instance.kwargs["timeout"] == (2.0, 7.0)
+
+
+def test_argument_parser_reads_timeout_overrides_from_env(monkeypatch):
+    monkeypatch.setenv("YQ_TIMEOUT", "9")
+    monkeypatch.setenv("YQ_TIMEOUT_CONNECT", "2")
+    monkeypatch.setenv("YQ_TIMEOUT_READ", "8")
+    monkeypatch.setenv("YQ_RETRIES", "4")
+    monkeypatch.setenv("YQ_BACKOFF_SECONDS", "0.75")
+
+    parser = build_argument_parser()
+    args = parser.parse_args([])
+    config = build_config_from_args(args)
+
+    assert config.timeout == 9.0
+    assert config.timeout_connect == 2.0
+    assert config.timeout_read == 8.0
+    assert config.retries == 4
+    assert config.backoff_seconds == 0.75
+    assert config.resolved_timeout() == (2.0, 8.0)
